@@ -27,6 +27,8 @@ SYMLINKED_ITEMS = [
     "statsig",
     "todos",
     "tasks",
+    "sessions",
+    "history.jsonl",
 ]
 
 # Placeholder files created in shared/ if they don't exist.
