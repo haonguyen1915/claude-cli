@@ -12,98 +12,52 @@ from claude_cli.models.config import AccountConfig
 
 # Items symlinked from shared/ into each account directory.
 # Only .credentials.json stays per-account (real file).
+# All items symlinked directly to ~/.claude/
 SYMLINKED_ITEMS = [
+    "CLAUDE.md",
     "settings.json",
     ".claude.json",
-    "CLAUDE.md",
     "rules",
     "agents",
     "plans",
     "commands",
     "skills",
-]
-
-# Subdirectories that must exist in shared/
-SHARED_SUBDIRS = [
-    "rules",
-    "agents",
-    "plans",
-    "commands",
-    "skills",
-]
-
-# Items symlinked directly to ~/.claude/ (not shared/)
-CLAUDE_DIR_SYMLINKS = [
     "projects",
     "plugins",
+    "statsig",
+    "todos",
+    "tasks",
 ]
 
 # Placeholder files created in shared/ if they don't exist.
 # JSON files need valid JSON content; Claude Code rejects empty files as corrupted.
 SHARED_PLACEHOLDER_FILES: dict[str, str] = {
-    "settings.json": "{}",
-    ".claude.json": "{}",
     "CLAUDE.md": "",
 }
 
 
 def ensure_shared_dir() -> None:
-    """Create shared/ with subdirectories and placeholder files.
-
-    If ~/.claude/ has commands/ or skills/, copy them into shared/ as seed data.
-    """
+    """Create shared/ with placeholder files (only CLAUDE.md lives here now)."""
     ensure_config_dir()
-    for subdir in SHARED_SUBDIRS:
-        (SHARED_DIR / subdir).mkdir(parents=True, exist_ok=True)
+    SHARED_DIR.mkdir(parents=True, exist_ok=True)
     for fname, default_content in SHARED_PLACEHOLDER_FILES.items():
         fpath = SHARED_DIR / fname
         if not fpath.exists():
             fpath.write_text(default_content)
-    _seed_from_claude_dir()
-
-
-# Directories to seed from ~/.claude/ into shared/ on first setup.
-_SEED_DIRS = ["commands", "skills"]
-
-
-def _seed_from_claude_dir() -> None:
-    """Copy commands/ and skills/ from ~/.claude/ into shared/ if shared copies are empty."""
-    claude_dir = Path.home() / ".claude"
-    for dirname in _SEED_DIRS:
-        src = claude_dir / dirname
-        dst = SHARED_DIR / dirname
-        if not src.is_dir():
-            continue
-        # Only seed if the shared dir is empty (don't overwrite user customizations)
-        existing = list(dst.iterdir()) if dst.exists() else []
-        if existing:
-            continue
-        for item in src.iterdir():
-            if item.name.startswith(".") or item.name == "__pycache__":
-                continue
-            dest_item = dst / item.name
-            if item.is_dir():
-                shutil.copytree(item, dest_item)
-            else:
-                shutil.copy2(item, dest_item)
 
 
 def setup_symlinks(account_dir: Path) -> None:
-    """Create symlinks from account dir to shared/ and ~/.claude/ items."""
-    # Shared items (settings, rules, commands, etc.)
+    """Create symlinks from account dir directly to ~/.claude/ items."""
+    claude_dir = Path.home() / ".claude"
     for item in SYMLINKED_ITEMS:
         link_path = account_dir / item
-        target = os.path.relpath(SHARED_DIR / item, account_dir)
-        if link_path.exists() or link_path.is_symlink():
-            link_path.unlink() if link_path.is_file() or link_path.is_symlink() else shutil.rmtree(link_path)
-        link_path.symlink_to(target)
-
-    # Items linked directly to ~/.claude/ (e.g. projects/)
-    claude_dir = Path.home() / ".claude"
-    for item in CLAUDE_DIR_SYMLINKS:
-        link_path = account_dir / item
         src = claude_dir / item
-        src.mkdir(parents=True, exist_ok=True)
+        if not src.exists():
+            if "." in item:
+                src.parent.mkdir(parents=True, exist_ok=True)
+                src.touch()
+            else:
+                src.mkdir(parents=True, exist_ok=True)
         target = os.path.relpath(src, account_dir)
         if link_path.exists() or link_path.is_symlink():
             link_path.unlink() if link_path.is_file() or link_path.is_symlink() else shutil.rmtree(link_path)
