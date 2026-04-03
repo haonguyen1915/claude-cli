@@ -20,6 +20,8 @@ SYMLINKED_ITEMS = [
     "agents",
     "plans",
     "projects",
+    "commands",
+    "skills",
 ]
 
 # Subdirectories that must exist in shared/
@@ -28,6 +30,8 @@ SHARED_SUBDIRS = [
     "agents",
     "plans",
     "projects",
+    "commands",
+    "skills",
 ]
 
 # Placeholder files created in shared/ if they don't exist.
@@ -40,7 +44,10 @@ SHARED_PLACEHOLDER_FILES: dict[str, str] = {
 
 
 def ensure_shared_dir() -> None:
-    """Create shared/ with subdirectories and placeholder files."""
+    """Create shared/ with subdirectories and placeholder files.
+
+    If ~/.claude/ has commands/ or skills/, copy them into shared/ as seed data.
+    """
     ensure_config_dir()
     for subdir in SHARED_SUBDIRS:
         (SHARED_DIR / subdir).mkdir(parents=True, exist_ok=True)
@@ -48,6 +55,33 @@ def ensure_shared_dir() -> None:
         fpath = SHARED_DIR / fname
         if not fpath.exists():
             fpath.write_text(default_content)
+    _seed_from_claude_dir()
+
+
+# Directories to seed from ~/.claude/ into shared/ on first setup.
+_SEED_DIRS = ["commands", "skills"]
+
+
+def _seed_from_claude_dir() -> None:
+    """Copy commands/ and skills/ from ~/.claude/ into shared/ if shared copies are empty."""
+    claude_dir = Path.home() / ".claude"
+    for dirname in _SEED_DIRS:
+        src = claude_dir / dirname
+        dst = SHARED_DIR / dirname
+        if not src.is_dir():
+            continue
+        # Only seed if the shared dir is empty (don't overwrite user customizations)
+        existing = list(dst.iterdir()) if dst.exists() else []
+        if existing:
+            continue
+        for item in src.iterdir():
+            if item.name.startswith(".") or item.name == "__pycache__":
+                continue
+            dest_item = dst / item.name
+            if item.is_dir():
+                shutil.copytree(item, dest_item)
+            else:
+                shutil.copy2(item, dest_item)
 
 
 def setup_symlinks(account_dir: Path) -> None:

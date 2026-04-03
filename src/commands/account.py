@@ -14,6 +14,8 @@ from claude_cli.core.account import (
     remove_account,
     rename_account,
     set_default_account,
+    setup_symlinks,
+    ensure_shared_dir,
 )
 from claude_cli.core.auth import check_auth_status, trigger_login
 from claude_cli.core.config import ACCOUNTS_DIR, SHARED_DIR, load_config
@@ -252,3 +254,27 @@ def current_command() -> None:
     print_detail("Config Dir", str(get_account_dir(default)))
     print_detail("Shared Dir", str(SHARED_DIR))
     print_detail("Created", format_date(account.created_at))
+
+
+@app.command("repair")
+def repair_command(
+    name: Optional[str] = typer.Argument(
+        None, help="Account name (default: all accounts)", autocompletion=complete_account_name
+    ),
+) -> None:
+    """Repair symlinks for account(s) — re-links shared items like commands, skills, etc."""
+    accounts = list_accounts()
+    if not accounts:
+        info("No accounts configured.")
+        raise typer.Exit(0)
+
+    ensure_shared_dir()
+
+    targets = [name] if name else accounts
+    for acct in targets:
+        if acct not in accounts:
+            error(f"Account '{acct}' not found.")
+            raise typer.Exit(4)
+        account_dir = get_account_dir(acct)
+        setup_symlinks(account_dir)
+        success(f"Repaired symlinks for '{acct}'")
