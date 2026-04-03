@@ -19,7 +19,6 @@ SYMLINKED_ITEMS = [
     "rules",
     "agents",
     "plans",
-    "projects",
     "commands",
     "skills",
 ]
@@ -29,9 +28,14 @@ SHARED_SUBDIRS = [
     "rules",
     "agents",
     "plans",
-    "projects",
     "commands",
     "skills",
+]
+
+# Items symlinked directly to ~/.claude/ (not shared/)
+CLAUDE_DIR_SYMLINKS = [
+    "projects",
+    "plugins",
 ]
 
 # Placeholder files created in shared/ if they don't exist.
@@ -85,14 +89,22 @@ def _seed_from_claude_dir() -> None:
 
 
 def setup_symlinks(account_dir: Path) -> None:
-    """Create relative symlinks from account dir to shared/ items.
-
-    Uses relative paths (../../shared/<item>) for portability.
-    """
+    """Create symlinks from account dir to shared/ and ~/.claude/ items."""
+    # Shared items (settings, rules, commands, etc.)
     for item in SYMLINKED_ITEMS:
         link_path = account_dir / item
-        # Relative path from account dir to shared item
         target = os.path.relpath(SHARED_DIR / item, account_dir)
+        if link_path.exists() or link_path.is_symlink():
+            link_path.unlink() if link_path.is_file() or link_path.is_symlink() else shutil.rmtree(link_path)
+        link_path.symlink_to(target)
+
+    # Items linked directly to ~/.claude/ (e.g. projects/)
+    claude_dir = Path.home() / ".claude"
+    for item in CLAUDE_DIR_SYMLINKS:
+        link_path = account_dir / item
+        src = claude_dir / item
+        src.mkdir(parents=True, exist_ok=True)
+        target = os.path.relpath(src, account_dir)
         if link_path.exists() or link_path.is_symlink():
             link_path.unlink() if link_path.is_file() or link_path.is_symlink() else shutil.rmtree(link_path)
         link_path.symlink_to(target)
