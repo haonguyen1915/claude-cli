@@ -23,14 +23,15 @@ def run_command(
     args: Optional[list[str]] = typer.Argument(None, help="Arguments passed through to claude"),
 ) -> None:
     """Launch Claude Code with the active (or specified) account."""
-    name = account or get_default_account()
-    if not name:
-        # No default set — interactive select
-        accounts = list_accounts()
-        if not accounts:
-            error("No accounts configured. Run 'claude-cli init' first.")
-            raise typer.Exit(2)
-        name = select_account("Select account to run:")
+    accounts = list_accounts()
+    if not accounts:
+        error("No accounts configured. Run 'claude-cli init' first.")
+        raise typer.Exit(2)
+
+    if account:
+        name = account
+    else:
+        name = select_account("Select account to run:", default=get_default_account())
         if name is None:
             raise typer.Exit(130)
 

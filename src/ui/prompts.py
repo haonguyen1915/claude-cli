@@ -87,7 +87,7 @@ def password_input(message: str) -> str | None:
     return result
 
 
-def select_account(message: str = "Select account:") -> str | None:
+def select_account(message: str = "Select account:", default: str | None = None) -> str | None:
     """Interactive account selector with labels.
 
     Shows: name  — label (active)
@@ -100,13 +100,18 @@ def select_account(message: str = "Select account:") -> str | None:
         return None
 
     choices = []
+    default_choice = None
     for name, acc in config.accounts.items():
         suffix = " (active)" if name == config.default else ""
-        choices.append(f"{name}  \u2014 {acc.label}{suffix}")
+        choice = f"{name}  \u2014 {acc.label}{suffix}"
+        choices.append(choice)
+        if name == default:
+            default_choice = choice
 
     selection = questionary.select(
         message,
         choices=choices,
+        default=default_choice,
         style=custom_style,
     ).ask()
     if selection is None:
