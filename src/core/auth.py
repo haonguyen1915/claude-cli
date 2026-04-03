@@ -2,39 +2,37 @@
 
 from __future__ import annotations
 
-import json
 import shutil
 import subprocess
-from pathlib import Path
+from getpass import getuser
 
 from claude_cli.core.account import get_account_dir
+from claude_cli.core.usage import _keychain_service_name
 
 
 def check_auth_status(name: str) -> str:
-    """Check authentication status for an account.
+    """Check authentication status for an account via macOS Keychain.
 
     Returns:
-        "valid" — credentials file exists and has token data
-        "expired" — credentials file exists but token looks expired
-        "none" — no credentials file
+        "valid" — keychain entry exists with OAuth token
+        "none" — no keychain entry found
     """
     account_dir = get_account_dir(name)
-    creds_file = account_dir / ".credentials.json"
-
-    if not creds_file.exists():
-        return "none"
+    service = _keychain_service_name(account_dir)
+    username = getuser()
 
     try:
-        with open(creds_file) as f:
-            data = json.load(f)
-        # Check for presence of token fields
-        if isinstance(data, dict) and (
-            data.get("accessToken") or data.get("oauthTokens")
-        ):
+        result = subprocess.run(
+            ["security", "find-generic-password", "-s", service, "-a", username],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
             return "valid"
-        return "expired"
-    except (json.JSONDecodeError, OSError):
-        return "expired"
+        return "none"
+    except (subprocess.TimeoutExpired, OSError):
+        return "none"
 
 
 def trigger_login(name: str) -> bool:

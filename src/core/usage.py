@@ -1,34 +1,123 @@
-"""Usage data fetching (stub — no programmatic API available)."""
+"""Usage data fetching via Anthropic OAuth usage API."""
 
 from __future__ import annotations
 
+import hashlib
+import json
+import subprocess
 import webbrowser
+from getpass import getuser
+from pathlib import Path
 
+from claude_cli.core.account import get_account_dir
 from claude_cli.core.config import load_config
-from claude_cli.models.usage import UsageInfo
+from claude_cli.models.usage import ApiUsageData, ExtraUsage, RateWindow, UsageInfo
+
+USAGE_API_URL = "https://api.anthropic.com/api/oauth/usage"
+KEYCHAIN_SERVICE_PREFIX = "Claude Code-credentials"
+
+
+def _keychain_service_name(account_dir: Path) -> str:
+    """Derive the macOS Keychain service name for an account's config dir.
+
+    Claude Code stores credentials in macOS Keychain using:
+      service = "Claude Code-credentials-<sha256[:8]>"
+    where the hash is computed from the absolute config dir path.
+    The default ~/.claude uses "Claude Code-credentials" (no suffix).
+    """
+    default_claude_dir = Path.home() / ".claude"
+    if account_dir.resolve() == default_claude_dir.resolve():
+        return KEYCHAIN_SERVICE_PREFIX
+    suffix = hashlib.sha256(str(account_dir).encode()).hexdigest()[:8]
+    return f"{KEYCHAIN_SERVICE_PREFIX}-{suffix}"
+
+
+def _get_oauth_token(account_name: str) -> str | None:
+    """Extract the OAuth access token from macOS Keychain for an account."""
+    account_dir = get_account_dir(account_name)
+    service = _keychain_service_name(account_dir)
+    username = getuser()
+
+    try:
+        result = subprocess.run(
+            ["security", "find-generic-password", "-s", service, "-a", username, "-w"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode != 0:
+            return None
+        data = json.loads(result.stdout.strip())
+        return data.get("claudeAiOauth", {}).get("accessToken")
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
+        return None
+
+
+def _fetch_usage_api(token: str) -> ApiUsageData | None:
+    """Call the Anthropic OAuth usage API and return parsed data."""
+    try:
+        result = subprocess.run(
+            [
+                "curl", "-s", "--max-time", "5",
+                USAGE_API_URL,
+                "-H", f"Authorization: Bearer {token}",
+                "-H", "anthropic-beta: oauth-2025-04-20",
+                "-H", "Content-Type: application/json",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode != 0:
+            return None
+
+        data = json.loads(result.stdout)
+
+        def parse_window(raw: dict | None) -> RateWindow | None:
+            if not raw or "utilization" not in raw:
+                return None
+            return RateWindow(utilization=raw["utilization"], resets_at=raw["resets_at"])
+
+        extra_raw = data.get("extra_usage")
+        extra = None
+        if extra_raw and isinstance(extra_raw, dict):
+            extra = ExtraUsage(**extra_raw)
+
+        return ApiUsageData(
+            five_hour=parse_window(data.get("five_hour")),
+            seven_day=parse_window(data.get("seven_day")),
+            seven_day_opus=parse_window(data.get("seven_day_opus")),
+            seven_day_sonnet=parse_window(data.get("seven_day_sonnet")),
+            extra_usage=extra,
+        )
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
+        return None
 
 
 def get_usage_info(name: str) -> UsageInfo:
-    """Get usage info for an account.
-
-    Returns stub data from config metadata since no programmatic
-    usage API is available. Wired for future extension.
-    """
+    """Get usage info for an account, including live API data."""
     config = load_config()
     account = config.accounts.get(name)
     if not account:
-        return UsageInfo(
-            account_name=name,
-            tier="unknown",
-            status="Not found",
-        )
+        return UsageInfo(account_name=name, tier="unknown", status="Not found")
+
+    token = _get_oauth_token(name)
+    api_usage = None
+    status = "Active"
+
+    if token:
+        api_usage = _fetch_usage_api(token)
+        if api_usage is None:
+            status = "Active (API unavailable)"
+    else:
+        status = "Active (no credentials)"
 
     return UsageInfo(
         account_name=name,
         tier=account.tier,
         label=account.label,
-        period=None,
-        status="Active",
+        status=status,
+        api_usage=api_usage,
     )
 
 
