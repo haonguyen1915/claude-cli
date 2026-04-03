@@ -53,8 +53,8 @@ def _get_oauth_token(account_name: str) -> str | None:
         return None
 
 
-def _fetch_usage_api(token: str) -> ApiUsageData | None:
-    """Call the Anthropic OAuth usage API and return parsed data."""
+def _fetch_usage_api(token: str) -> tuple[ApiUsageData | None, str]:
+    """Call the Anthropic OAuth usage API. Returns (data, status_message)."""
     try:
         result = subprocess.run(
             [
@@ -69,9 +69,15 @@ def _fetch_usage_api(token: str) -> ApiUsageData | None:
             timeout=10,
         )
         if result.returncode != 0:
-            return None
+            return None, "API request failed"
 
         data = json.loads(result.stdout)
+
+        if "error" in data:
+            err_type = data["error"].get("type", "unknown")
+            if "rate_limit" in err_type:
+                return None, "Rate limited — try again later"
+            return None, f"API error: {err_type}"
 
         def parse_window(raw: dict | None) -> RateWindow | None:
             if not raw or "utilization" not in raw:
@@ -89,9 +95,11 @@ def _fetch_usage_api(token: str) -> ApiUsageData | None:
             seven_day_opus=parse_window(data.get("seven_day_opus")),
             seven_day_sonnet=parse_window(data.get("seven_day_sonnet")),
             extra_usage=extra,
-        )
-    except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
-        return None
+        ), "Active"
+    except subprocess.TimeoutExpired:
+        return None, "API timeout"
+    except (json.JSONDecodeError, OSError):
+        return None, "API unavailable"
 
 
 def get_usage_info(name: str) -> UsageInfo:
@@ -106,11 +114,9 @@ def get_usage_info(name: str) -> UsageInfo:
     status = "Active"
 
     if token:
-        api_usage = _fetch_usage_api(token)
-        if api_usage is None:
-            status = "Active (API unavailable)"
+        api_usage, status = _fetch_usage_api(token)
     else:
-        status = "Active (no credentials)"
+        status = "No credentials"
 
     return UsageInfo(
         account_name=name,

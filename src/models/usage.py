@@ -18,7 +18,7 @@ class RateWindow(BaseModel):
     """A single rate limit window (e.g. 5-hour session, 7-day weekly)."""
 
     utilization: float  # 0-100 percentage
-    resets_at: datetime
+    resets_at: datetime | None = None
 
 
 class ExtraUsage(BaseModel):

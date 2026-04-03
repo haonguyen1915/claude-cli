@@ -153,7 +153,7 @@ def _collect_rows(
             tier if first else "",
             f"{pct_str} {label}",
             _progress_bar(window.utilization, width=20),
-            _format_reset_time(window.resets_at),
+            _format_reset_time(window.resets_at) if window.resets_at else "",
         ))
         first = False
 
