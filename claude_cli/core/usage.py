@@ -102,8 +102,42 @@ def _fetch_usage_api(token: str) -> tuple[ApiUsageData | None, str]:
         return None, "API unavailable"
 
 
-# Cache last successful API usage per account
-_usage_cache: dict[str, "ApiUsageData"] = {}
+# File-based cache for usage data
+from claude_cli.core.config import CONFIG_DIR
+
+USAGE_CACHE_FILE = CONFIG_DIR / "usage-cache.json"
+
+
+def _load_cache() -> dict[str, ApiUsageData]:
+    """Load usage cache from file."""
+    if not USAGE_CACHE_FILE.exists():
+        return {}
+    try:
+        data = json.loads(USAGE_CACHE_FILE.read_text())
+        return {name: ApiUsageData.model_validate(entry) for name, entry in data.items()}
+    except (json.JSONDecodeError, OSError, Exception):
+        return {}
+
+
+def _save_cache(cache: dict[str, ApiUsageData]) -> None:
+    """Save usage cache to file."""
+    try:
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        data = {name: entry.model_dump(mode="json") for name, entry in cache.items()}
+        USAGE_CACHE_FILE.write_text(json.dumps(data, indent=2))
+    except OSError:
+        pass
+
+
+# In-memory cache, initialized lazily from file
+_usage_cache: dict[str, ApiUsageData] | None = None
+
+
+def _get_cache() -> dict[str, ApiUsageData]:
+    global _usage_cache
+    if _usage_cache is None:
+        _usage_cache = _load_cache()
+    return _usage_cache
 
 
 def get_usage_info(name: str) -> UsageInfo:
@@ -116,6 +150,7 @@ def get_usage_info(name: str) -> UsageInfo:
     if not account:
         return UsageInfo(account_name=name, tier="unknown", status="Not found")
 
+    cache = _get_cache()
     token = _get_oauth_token(name)
     api_usage = None
     status = "Active"
@@ -123,14 +158,18 @@ def get_usage_info(name: str) -> UsageInfo:
     if token:
         api_usage, status = _fetch_usage_api(token)
         if api_usage:
-            _usage_cache[name] = api_usage
+            cache[name] = api_usage
+            _save_cache(cache)
             status = "OK"
-        elif name in _usage_cache:
-            # Use cached data on error
-            api_usage = _usage_cache[name]
+        elif name in cache:
+            api_usage = cache[name]
             status = f"{status} (cached)"
     else:
-        status = "No credentials"
+        if name in cache:
+            api_usage = cache[name]
+            status = "No credentials (cached)"
+        else:
+            status = "No credentials"
 
     return UsageInfo(
         account_name=name,
