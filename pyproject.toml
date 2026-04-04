@@ -24,7 +24,7 @@ types-pyyaml = ">=6.0.12,<7"
 
 [tool.poetry.scripts]
 claude-cli = "claude_cli.main:app"
-cc = "claude_cli.main:app"
+ccc = "claude_cli.main:app"
 
 [build-system]
 requires = ["poetry-core>=2.0.0"]
