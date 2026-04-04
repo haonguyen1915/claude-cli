@@ -17,19 +17,20 @@ if TYPE_CHECKING:
 # ─── Accounts ────────────────────────────────────────────────────────────────
 
 
-def print_accounts_table(config: Config, auth_statuses: dict[str, str]) -> None:
-    """Print all accounts with auth status."""
+def print_accounts_table(config: Config, auth_statuses: dict[str, tuple[str, str]]) -> None:
+    """Print all accounts with auth status and token expiry."""
     table = Table(title="Claude CLI Accounts", show_lines=False)
     table.add_column("#", justify="right", style="dim")
     table.add_column("Account", style="bold")
     table.add_column("Label")
     table.add_column("Tier", style="tier")
     table.add_column("Status")
+    table.add_column("Expires", style="dim")
 
     for i, (name, account) in enumerate(config.accounts.items(), 1):
         is_active = name == config.default
         display_name = f"{name} (active)" if is_active else name
-        auth = auth_statuses.get(name, "unknown")
+        auth, expires = auth_statuses.get(name, ("unknown", ""))
         if auth == "valid":
             status = "[green]\u2713 logged in[/green]"
         elif auth == "expired":
@@ -43,6 +44,7 @@ def print_accounts_table(config: Config, auth_statuses: dict[str, str]) -> None:
             account.label,
             account.tier,
             status,
+            expires,
         )
 
     console.print(table)
@@ -51,33 +53,30 @@ def print_accounts_table(config: Config, auth_statuses: dict[str, str]) -> None:
 # ─── Status ──────────────────────────────────────────────────────────────────
 
 
-def print_status_table(config: Config, auth_statuses: dict[str, str]) -> None:
+def print_status_table(config: Config, auth_statuses: dict[str, tuple[str, str]]) -> None:
     """Print status dashboard table."""
     table = Table(title="Claude CLI Status", show_lines=False)
     table.add_column("Account", style="bold")
     table.add_column("Tier", style="tier")
     table.add_column("Auth")
-    table.add_column("Status")
+    table.add_column("Expires", style="dim")
 
     for name, account in config.accounts.items():
         is_active = name == config.default
         prefix = "\u25cf " if is_active else "  "
-        auth = auth_statuses.get(name, "unknown")
+        auth, expires = auth_statuses.get(name, ("unknown", ""))
         if auth == "valid":
             auth_display = "[green]\u2713 valid[/green]"
-            status_display = "Active"
         elif auth == "expired":
             auth_display = "[red]\u2717 expired[/red]"
-            status_display = "Needs login"
         else:
             auth_display = "[dim]\u2717 none[/dim]"
-            status_display = "Needs login"
 
         table.add_row(
             f"{prefix}{name}",
             account.tier,
             auth_display,
-            status_display,
+            expires,
         )
 
     console.print(table)

@@ -50,7 +50,8 @@ def list_command(
                 "tier": acc.tier,
                 "created_at": acc.created_at.isoformat(),
                 "is_default": name == config.default,
-                "auth_status": check_auth_status(name),
+                "auth_status": check_auth_status(name)[0],
+                "expires": check_auth_status(name)[1],
             }
             for name, acc in config.accounts.items()
         }
@@ -238,9 +239,9 @@ def current_command() -> None:
         raise typer.Exit(0)
 
     account = config.accounts[default]
-    auth = check_auth_status(default)
+    auth, expires = check_auth_status(default)
     if auth == "valid":
-        status = "\u2713 logged in"
+        status = f"\u2713 logged in (expires {expires})" if expires else "\u2713 logged in"
     elif auth == "expired":
         status = "\u2717 expired"
     else:
