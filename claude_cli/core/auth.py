@@ -62,6 +62,136 @@ def check_auth_status(name: str) -> tuple[str, str]:
         return "none", ""
 
 
+OAUTH_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
+OAUTH_TOKEN_URL = "https://console.anthropic.com/v1/oauth/token"
+
+# Refresh when token expires within this many minutes
+REFRESH_THRESHOLD_MINUTES = 120
+
+
+def _get_keychain_data(name: str) -> dict | None:
+    """Read raw keychain JSON for an account."""
+    import json
+
+    account_dir = get_account_dir(name)
+    service = _keychain_service_name(account_dir)
+    username = getuser()
+
+    try:
+        result = subprocess.run(
+            ["security", "find-generic-password", "-s", service, "-a", username, "-w"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode != 0:
+            return None
+        return json.loads(result.stdout.strip())
+    except (subprocess.TimeoutExpired, Exception):
+        return None
+
+
+def _save_keychain_data(name: str, data: dict) -> bool:
+    """Write updated keychain JSON for an account."""
+    import json
+
+    account_dir = get_account_dir(name)
+    service = _keychain_service_name(account_dir)
+    username = getuser()
+    payload = json.dumps(data)
+
+    # Delete old entry, then add new
+    subprocess.run(
+        ["security", "delete-generic-password", "-s", service, "-a", username],
+        capture_output=True,
+        timeout=5,
+    )
+    result = subprocess.run(
+        ["security", "add-generic-password", "-s", service, "-a", username, "-w", payload],
+        capture_output=True,
+        timeout=5,
+    )
+    return result.returncode == 0
+
+
+def token_needs_refresh(name: str) -> bool:
+    """Check if token expires within REFRESH_THRESHOLD_MINUTES."""
+    import time
+
+    data = _get_keychain_data(name)
+    if not data:
+        return False
+    oauth = data.get("claudeAiOauth", {})
+    expires_at_ms = oauth.get("expiresAt")
+    if expires_at_ms is None:
+        return False
+
+    remaining_sec = (expires_at_ms / 1000) - time.time()
+    return remaining_sec < REFRESH_THRESHOLD_MINUTES * 60
+
+
+def refresh_token(name: str) -> bool:
+    """Refresh OAuth token using the refresh_token grant. Returns True on success."""
+    import json
+
+    data = _get_keychain_data(name)
+    if not data:
+        return False
+
+    oauth = data.get("claudeAiOauth", {})
+    refresh_tok = oauth.get("refreshToken")
+    if not refresh_tok:
+        return False
+
+    try:
+        result = subprocess.run(
+            [
+                "curl", "-s", "--max-time", "10",
+                "-X", "POST", OAUTH_TOKEN_URL,
+                "-H", "Content-Type: application/json",
+                "-d", json.dumps({
+                    "grant_type": "refresh_token",
+                    "refresh_token": refresh_tok,
+                    "client_id": OAUTH_CLIENT_ID,
+                }),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if result.returncode != 0:
+            return False
+
+        resp = json.loads(result.stdout)
+        if "access_token" not in resp:
+            return False
+
+        # Update keychain with new tokens
+        import time
+        expires_in = resp.get("expires_in", 28800)  # default 8h
+        oauth["accessToken"] = resp["access_token"]
+        if "refresh_token" in resp:
+            oauth["refreshToken"] = resp["refresh_token"]
+        oauth["expiresAt"] = int((time.time() + expires_in) * 1000)
+        data["claudeAiOauth"] = oauth
+
+        return _save_keychain_data(name, data)
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
+        return False
+
+
+def refresh_expiring_tokens() -> list[str]:
+    """Refresh tokens for all accounts that are near expiry. Returns list of refreshed account names."""
+    from claude_cli.core.account import list_accounts
+
+    refreshed = []
+    for name in list_accounts():
+        if token_needs_refresh(name):
+            if refresh_token(name):
+                refreshed.append(name)
+    return refreshed
+
+
 def trigger_login(name: str) -> bool:
     """Run `claude --login` with CLAUDE_CONFIG_DIR set to the account directory.
 

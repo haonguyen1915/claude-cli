@@ -80,14 +80,23 @@ def show_command(
     import time
     from datetime import datetime
 
+    from rich.console import Group
     from rich.live import Live
+    from rich.text import Text
 
+    from claude_cli.core.auth import refresh_expiring_tokens
     from claude_cli.ui.tables import build_usage_table
 
     interval = max(1, watch) * 60
     try:
         with Live(console=console, refresh_per_second=1) as live:
             while True:
+                # Auto-refresh tokens near expiry
+                refreshed = refresh_expiring_tokens()
+                refresh_msg = ""
+                if refreshed:
+                    refresh_msg = f" · refreshed: {', '.join(refreshed)}"
+
                 if all_accounts:
                     usage_list = get_all_usage_info()
                 else:
@@ -96,10 +105,11 @@ def show_command(
 
                 now = datetime.now().strftime("%H:%M:%S")
                 table = build_usage_table(usage_list)
-                from rich.text import Text
-                footer = Text(f"  Updated {now} · refreshing every {watch}m · Ctrl+C to stop", style="dim")
+                footer = Text(
+                    f"  Updated {now} · every {watch}m · Ctrl+C to stop{refresh_msg}",
+                    style="dim",
+                )
 
-                from rich.console import Group
                 live.update(Group(table, footer))
                 time.sleep(interval)
     except KeyboardInterrupt:
