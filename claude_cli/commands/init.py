@@ -36,7 +36,7 @@ def init_command() -> None:
     if is_first_run:
         claude_dir = Path.home() / ".claude"
         if claude_dir.exists():
-            console.print(f"  Existing Claude config found at [highlight]{claude_dir}[/highlight]\n")
+            console.print(f"  Existing config found at [highlight]{claude_dir}[/highlight]\n")
             migrate = confirm("Migrate existing config to claude-cli?", default=True)
             if migrate is None:
                 raise typer.Exit(130)

@@ -10,7 +10,7 @@ from getpass import getuser
 from pathlib import Path
 
 from claude_cli.core.account import get_account_dir
-from claude_cli.core.config import load_config
+from claude_cli.core.config import CONFIG_DIR, load_config
 from claude_cli.models.usage import ApiUsageData, ExtraUsage, RateWindow, UsageInfo
 
 USAGE_API_URL = "https://api.anthropic.com/api/oauth/usage"
@@ -58,11 +58,17 @@ def _fetch_usage_api(token: str) -> tuple[ApiUsageData | None, str]:
     try:
         result = subprocess.run(
             [
-                "curl", "-s", "--max-time", "5",
+                "curl",
+                "-s",
+                "--max-time",
+                "5",
                 USAGE_API_URL,
-                "-H", f"Authorization: Bearer {token}",
-                "-H", "anthropic-beta: oauth-2025-04-20",
-                "-H", "Content-Type: application/json",
+                "-H",
+                f"Authorization: Bearer {token}",
+                "-H",
+                "anthropic-beta: oauth-2025-04-20",
+                "-H",
+                "Content-Type: application/json",
             ],
             capture_output=True,
             text=True,
@@ -103,8 +109,6 @@ def _fetch_usage_api(token: str) -> tuple[ApiUsageData | None, str]:
 
 
 # File-based cache for usage data
-from claude_cli.core.config import CONFIG_DIR
-
 USAGE_CACHE_FILE = CONFIG_DIR / "usage-cache.json"
 
 

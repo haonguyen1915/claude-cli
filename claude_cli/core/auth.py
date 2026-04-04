@@ -145,14 +145,23 @@ def refresh_token(name: str) -> bool:
     try:
         result = subprocess.run(
             [
-                "curl", "-s", "--max-time", "10",
-                "-X", "POST", OAUTH_TOKEN_URL,
-                "-H", "Content-Type: application/json",
-                "-d", json.dumps({
-                    "grant_type": "refresh_token",
-                    "refresh_token": refresh_tok,
-                    "client_id": OAUTH_CLIENT_ID,
-                }),
+                "curl",
+                "-s",
+                "--max-time",
+                "10",
+                "-X",
+                "POST",
+                OAUTH_TOKEN_URL,
+                "-H",
+                "Content-Type: application/json",
+                "-d",
+                json.dumps(
+                    {
+                        "grant_type": "refresh_token",
+                        "refresh_token": refresh_tok,
+                        "client_id": OAUTH_CLIENT_ID,
+                    }
+                ),
             ],
             capture_output=True,
             text=True,
@@ -167,6 +176,7 @@ def refresh_token(name: str) -> bool:
 
         # Update keychain with new tokens
         import time
+
         expires_in = resp.get("expires_in", 28800)  # default 8h
         oauth["accessToken"] = resp["access_token"]
         if "refresh_token" in resp:
@@ -180,7 +190,10 @@ def refresh_token(name: str) -> bool:
 
 
 def refresh_expiring_tokens() -> list[str]:
-    """Refresh tokens for all accounts that are near expiry. Returns list of refreshed account names."""
+    """Refresh tokens for all accounts near expiry.
+
+    Returns list of refreshed account names.
+    """
     from claude_cli.core.account import list_accounts
 
     refreshed = []

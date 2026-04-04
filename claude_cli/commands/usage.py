@@ -28,6 +28,7 @@ def _fetch_and_display(
 
         if output == "json":
             import json
+
             data = [u.model_dump(mode="json") for u in usage_list]
             console.print_json(json.dumps(data))
             return
@@ -55,6 +56,7 @@ def _fetch_and_display(
 
     if output == "json":
         import json
+
         console.print_json(json.dumps(usage.model_dump(mode="json")))
         return
 

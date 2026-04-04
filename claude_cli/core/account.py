@@ -82,7 +82,10 @@ def setup_symlinks(account_dir: Path) -> None:
                 src.mkdir(parents=True, exist_ok=True)
         target = os.path.relpath(src, account_dir)
         if link_path.exists() or link_path.is_symlink():
-            link_path.unlink() if link_path.is_file() or link_path.is_symlink() else shutil.rmtree(link_path)
+            if link_path.is_file() or link_path.is_symlink():
+                link_path.unlink()
+            else:
+                shutil.rmtree(link_path)
         link_path.symlink_to(target)
 
 

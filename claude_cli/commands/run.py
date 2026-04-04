@@ -67,7 +67,9 @@ def quick_run_command(
 def run_command(
     ctx: typer.Context,
     account: str | None = typer.Option(
-        None, "--account", "-a",
+        None,
+        "--account",
+        "-a",
         help="Account to use (skip interactive prompt)",
         autocompletion=complete_account_name,
     ),

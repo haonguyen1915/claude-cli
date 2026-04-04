@@ -43,6 +43,7 @@ def main(
     """Launch Claude Code with the current account, or use a subcommand."""
     try:
         from claude_cli.core.history import record_command
+
         record_command(sys.argv[1:])
     except Exception:
         pass
@@ -52,6 +53,7 @@ def main(
 
     # No subcommand — quick launch with default account, pass remaining args
     from claude_cli.commands.run import quick_run_command
+
     ctx.invoke(quick_run_command, args=ctx.args)
 
 
@@ -65,9 +67,10 @@ def _main() -> None:
         # Strip leading --
         clean = args[1:] if args[0] == "--" else args
         first = clean[0] if clean else None
-        if first and first not in _SUBCOMMANDS and first not in ("--help", "-h", "--version", "-V",
-                                                                   "--install-completion", "--show-completion"):
+        skip = ("--help", "-h", "--version", "-V", "--install-completion", "--show-completion")
+        if first and first not in _SUBCOMMANDS and first not in skip:
             from claude_cli.commands.run import quick_run_command_direct
+
             quick_run_command_direct(clean)
             return
 
@@ -76,10 +79,10 @@ def _main() -> None:
 
 # ─── Register sub-command groups ─────────────────────────────────────────────
 
-from claude_cli.commands.account import app as account_app
-from claude_cli.commands.config import app as config_app
-from claude_cli.commands.history import app as history_app
-from claude_cli.commands.usage import app as usage_app
+from claude_cli.commands.account import app as account_app  # noqa: E402
+from claude_cli.commands.config import app as config_app  # noqa: E402
+from claude_cli.commands.history import app as history_app  # noqa: E402
+from claude_cli.commands.usage import app as usage_app  # noqa: E402
 
 app.add_typer(account_app, name="account", help="Manage account profiles.")
 app.add_typer(config_app, name="config", help="Global CLI configuration.")
@@ -88,10 +91,10 @@ app.add_typer(history_app, name="history", help="Command history.")
 
 # ─── Register top-level commands ─────────────────────────────────────────────
 
-from claude_cli.commands.init import init_command
-from claude_cli.commands.run import run_command
-from claude_cli.commands.status import status_command
-from claude_cli.commands.use import use_command
+from claude_cli.commands.init import init_command  # noqa: E402
+from claude_cli.commands.run import run_command  # noqa: E402
+from claude_cli.commands.status import status_command  # noqa: E402
+from claude_cli.commands.use import use_command  # noqa: E402
 
 app.command("init", help="Interactive setup wizard.")(init_command)
 app.command("use", help="Switch the active account.")(use_command)

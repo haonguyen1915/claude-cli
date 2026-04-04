@@ -164,27 +164,31 @@ def _collect_rows(usage: UsageInfo) -> list[_Row]:
         if window is None:
             continue
         pct_str = f"{window.utilization:>3.0f}%"
-        rows.append((
-            account_label if first else "",
-            tier if first else "",
-            f"{pct_str} {label}",
-            _progress_bar(window.utilization, width=20),
-            _format_reset_time(window.resets_at) if window.resets_at else "",
-            styled_status if first else "",
-        ))
+        rows.append(
+            (
+                account_label if first else "",
+                tier if first else "",
+                f"{pct_str} {label}",
+                _progress_bar(window.utilization, width=20),
+                _format_reset_time(window.resets_at) if window.resets_at else "",
+                styled_status if first else "",
+            )
+        )
         first = False
 
     if api.extra_usage and api.extra_usage.is_enabled:
         pct = api.extra_usage.utilization or 0
         pct_str = f"{pct:>3.0f}%"
-        rows.append((
-            account_label if first else "",
-            tier if first else "",
-            f"{pct_str} Extra",
-            _progress_bar(pct, width=20),
-            "",
-            styled_status if first else "",
-        ))
+        rows.append(
+            (
+                account_label if first else "",
+                tier if first else "",
+                f"{pct_str} Extra",
+                _progress_bar(pct, width=20),
+                "",
+                styled_status if first else "",
+            )
+        )
 
     return rows
 

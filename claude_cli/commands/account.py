@@ -143,7 +143,9 @@ def remove_command(
         raise typer.Exit(4)
 
     if not yes:
-        console.print(f'\n  [warning]\u26a0 This will remove account "{name}" and its credentials.[/warning]')
+        console.print(
+            f'\n  [warning]\u26a0 This will remove account "{name}" and its credentials.[/warning]'
+        )
         console.print("  Shared settings, rules, and memory are NOT affected.\n")
         proceed = confirm("Continue?", default=False)
         if not proceed:
