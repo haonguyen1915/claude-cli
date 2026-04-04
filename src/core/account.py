@@ -29,6 +29,7 @@ SYMLINKED_ITEMS = [
     "tasks",
     "sessions",
     "history.jsonl",
+    "ide",
 ]
 
 # Placeholder files created in shared/ if they don't exist.
