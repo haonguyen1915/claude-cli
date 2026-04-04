@@ -25,6 +25,7 @@ dev = [
 
 [project.scripts]
 claude-cli = "claude_cli.main:app"
+cc = "claude_cli.main:app"
 
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]

@@ -11,9 +11,11 @@ from claude_cli import __version__
 app = typer.Typer(
     name="claude-cli",
     help="CLI tool for managing multiple Claude Code subscription accounts.",
-    no_args_is_help=True,
+    no_args_is_help=False,
+    invoke_without_command=True,
     rich_markup_mode="rich",
     add_completion=True,
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
 )
 
 
@@ -25,6 +27,7 @@ def version_callback(value: bool) -> None:
 
 @app.callback()
 def main(
+    ctx: typer.Context,
     version: bool = typer.Option(
         False,
         "--version",
@@ -34,13 +37,20 @@ def main(
         is_eager=True,
     ),
 ) -> None:
-    """CLI tool for managing multiple Claude Code subscription accounts."""
+    """Launch Claude Code with the current account, or use a subcommand."""
     try:
         from claude_cli.core.history import record_command
-
         record_command(sys.argv[1:])
     except Exception:
         pass
+
+    # If a subcommand was invoked, let it handle
+    if ctx.invoked_subcommand is not None:
+        return
+
+    # No subcommand — quick launch with default account, pass remaining args
+    from claude_cli.commands.run import quick_run_command
+    ctx.invoke(quick_run_command, args=ctx.args)
 
 
 # ─── Register sub-command groups ─────────────────────────────────────────────
@@ -64,5 +74,5 @@ from claude_cli.commands.use import use_command
 
 app.command("init", help="Interactive setup wizard.")(init_command)
 app.command("use", help="Switch the active account.")(use_command)
-app.command("run", help="Launch Claude Code with the active account.")(run_command)
+app.command("run", help="Launch Claude Code — select account interactively.")(run_command)
 app.command("status", help="Dashboard — all accounts overview.")(status_command)
