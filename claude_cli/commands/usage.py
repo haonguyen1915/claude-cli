@@ -16,15 +16,12 @@ from claude_cli.utils.completers import complete_account_name
 app = typer.Typer(no_args_is_help=True)
 
 
-@app.command("show")
-def show_command(
-    name: Optional[str] = typer.Argument(
-        None, help="Account name", autocompletion=complete_account_name
-    ),
-    all_accounts: bool = typer.Option(False, "--all", "-a", help="Show all accounts"),
-    output: Optional[str] = typer.Option(None, "--output", "-O", help="Output format: table, json"),
+def _fetch_and_display(
+    name: str | None,
+    all_accounts: bool,
+    output: str | None,
 ) -> None:
-    """Show usage for one or all accounts."""
+    """Fetch and display usage data once."""
     if all_accounts:
         usage_list = get_all_usage_info()
         if not usage_list:
@@ -33,7 +30,6 @@ def show_command(
 
         if output == "json":
             import json
-
             data = [u.model_dump(mode="json") for u in usage_list]
             console.print_json(json.dumps(data))
             return
@@ -41,7 +37,6 @@ def show_command(
         print_usage_summary_table(usage_list)
         return
 
-    # Single account
     if not name:
         name = get_default_account()
         if not name:
@@ -62,11 +57,53 @@ def show_command(
 
     if output == "json":
         import json
-
         console.print_json(json.dumps(usage.model_dump(mode="json")))
         return
 
     print_usage_detail(usage)
+
+
+@app.command("show")
+def show_command(
+    name: Optional[str] = typer.Argument(
+        None, help="Account name", autocompletion=complete_account_name
+    ),
+    all_accounts: bool = typer.Option(False, "--all", "-a", help="Show all accounts"),
+    output: Optional[str] = typer.Option(None, "--output", "-O", help="Output format: table, json"),
+    watch: Optional[int] = typer.Option(None, "--watch", "-w", help="Auto-refresh every N minutes"),
+) -> None:
+    """Show usage for one or all accounts."""
+    if not watch:
+        _fetch_and_display(name, all_accounts, output)
+        return
+
+    import time
+    from datetime import datetime
+
+    from rich.live import Live
+
+    from claude_cli.ui.tables import build_usage_table
+
+    interval = max(1, watch) * 60
+    try:
+        with Live(console=console, refresh_per_second=1) as live:
+            while True:
+                if all_accounts:
+                    usage_list = get_all_usage_info()
+                else:
+                    resolved = name or get_default_account()
+                    usage_list = [get_usage_info(resolved)] if resolved else []
+
+                now = datetime.now().strftime("%H:%M:%S")
+                table = build_usage_table(usage_list)
+                from rich.text import Text
+                footer = Text(f"  Updated {now} · refreshing every {watch}m · Ctrl+C to stop", style="dim")
+
+                from rich.console import Group
+                live.update(Group(table, footer))
+                time.sleep(interval)
+    except KeyboardInterrupt:
+        console.print("  [dim]Stopped.[/dim]")
 
 
 @app.command("open")

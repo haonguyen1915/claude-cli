@@ -171,8 +171,8 @@ def _collect_rows(
     return rows
 
 
-def print_usage_summary_table(usage_list: list[UsageInfo]) -> None:
-    """Print usage summary for all accounts as a single table."""
+def build_usage_table(usage_list: list[UsageInfo]) -> Table:
+    """Build usage table and return the Table object."""
     table = Table(title="Claude Usage Overview", show_lines=False, title_style="bold")
     table.add_column("Account", style="bold")
     table.add_column("Tier", style="cyan", justify="center")
@@ -184,12 +184,16 @@ def print_usage_summary_table(usage_list: list[UsageInfo]) -> None:
         rows = _collect_rows(usage)
         for account, tier, metric, bar, resets in rows:
             table.add_row(account, tier, metric, bar, resets)
-        # Add section separator between accounts (except last)
         if i < len(usage_list) - 1:
             table.add_section()
 
+    return table
+
+
+def print_usage_summary_table(usage_list: list[UsageInfo]) -> None:
+    """Print usage summary for all accounts as a single table."""
     console.print()
-    console.print(table)
+    console.print(build_usage_table(usage_list))
     console.print()
 
 
