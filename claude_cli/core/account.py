@@ -7,7 +7,13 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
-from claude_cli.core.config import ACCOUNTS_DIR, SHARED_DIR, ensure_config_dir, load_config, save_config
+from claude_cli.core.config import (
+    ACCOUNTS_DIR,
+    SHARED_DIR,
+    ensure_config_dir,
+    load_config,
+    save_config,
+)
 from claude_cli.models.config import AccountConfig
 
 # Items symlinked from shared/ into each account directory.

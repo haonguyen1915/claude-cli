@@ -2,23 +2,20 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 
 from claude_cli.core.account import (
     add_account,
+    ensure_shared_dir,
     get_account_dir,
     get_default_account,
     list_accounts,
     remove_account,
     rename_account,
-    set_default_account,
     setup_symlinks,
-    ensure_shared_dir,
 )
 from claude_cli.core.auth import check_auth_status, trigger_login
-from claude_cli.core.config import ACCOUNTS_DIR, SHARED_DIR, load_config
+from claude_cli.core.config import SHARED_DIR, load_config
 from claude_cli.ui import console, error, info, print_detail, print_header, success
 from claude_cli.ui.prompts import confirm, select_account, select_from_list, text_input
 from claude_cli.ui.tables import print_accounts_table
@@ -33,7 +30,7 @@ TIER_CHOICES = ["pro", "max", "team", "enterprise"]
 
 @app.command("list")
 def list_command(
-    output: Optional[str] = typer.Option(None, "--output", "-O", help="Output format: table, json"),
+    output: str | None = typer.Option(None, "--output", "-O", help="Output format: table, json"),
 ) -> None:
     """List all configured accounts."""
     config = load_config()
@@ -64,9 +61,9 @@ def list_command(
 
 @app.command("add")
 def add_command(
-    name: Optional[str] = typer.Argument(None, help="Account name slug"),
-    label: Optional[str] = typer.Option(None, "--label", "-l", help="Display label"),
-    tier: Optional[str] = typer.Option(
+    name: str | None = typer.Argument(None, help="Account name slug"),
+    label: str | None = typer.Option(None, "--label", "-l", help="Display label"),
+    tier: str | None = typer.Option(
         None, "--tier", "-t", help="Subscription tier", autocompletion=complete_tier
     ),
 ) -> None:
@@ -125,7 +122,7 @@ def add_command(
 
 @app.command("remove")
 def remove_command(
-    name: Optional[str] = typer.Argument(
+    name: str | None = typer.Argument(
         None, help="Account name to remove", autocompletion=complete_account_name
     ),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation"),
@@ -159,10 +156,10 @@ def remove_command(
 
 @app.command("rename")
 def rename_command(
-    old_name: Optional[str] = typer.Argument(
+    old_name: str | None = typer.Argument(
         None, help="Current account name", autocompletion=complete_account_name
     ),
-    new_name: Optional[str] = typer.Argument(None, help="New account name"),
+    new_name: str | None = typer.Argument(None, help="New account name"),
 ) -> None:
     """Rename an account slug."""
     accounts = list_accounts()
@@ -198,7 +195,7 @@ def rename_command(
 
 @app.command("login")
 def login_command(
-    name: Optional[str] = typer.Argument(
+    name: str | None = typer.Argument(
         None, help="Account name (default: active account)", autocompletion=complete_account_name
     ),
 ) -> None:
@@ -259,7 +256,7 @@ def current_command() -> None:
 
 @app.command("repair")
 def repair_command(
-    name: Optional[str] = typer.Argument(
+    name: str | None = typer.Argument(
         None, help="Account name (default: all accounts)", autocompletion=complete_account_name
     ),
 ) -> None:

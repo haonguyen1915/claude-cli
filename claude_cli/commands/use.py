@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 
 from claude_cli.core.account import get_default_account, list_accounts, set_default_account
@@ -13,7 +11,7 @@ from claude_cli.utils.completers import complete_account_name
 
 
 def use_command(
-    name: Optional[str] = typer.Argument(
+    name: str | None = typer.Argument(
         None, help="Account name to switch to", autocompletion=complete_account_name
     ),
 ) -> None:

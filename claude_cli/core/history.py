@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from pathlib import Path
 
 from claude_cli.core.config import CONFIG_DIR
 

@@ -10,7 +10,6 @@ import typer
 from claude_cli.core.account import (
     add_account,
     ensure_shared_dir,
-    get_account_dir,
     migrate_existing_claude_dir,
     set_default_account,
 )

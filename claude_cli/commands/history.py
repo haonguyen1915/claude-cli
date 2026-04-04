@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 
 from claude_cli.core.history import clear_history, get_history

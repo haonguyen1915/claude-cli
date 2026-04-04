@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 
 from claude_cli.core.account import get_default_account, list_accounts
@@ -65,12 +63,12 @@ def _fetch_and_display(
 
 @app.command("show")
 def show_command(
-    name: Optional[str] = typer.Argument(
+    name: str | None = typer.Argument(
         None, help="Account name", autocompletion=complete_account_name
     ),
     all_accounts: bool = typer.Option(False, "--all", "-a", help="Show all accounts"),
-    output: Optional[str] = typer.Option(None, "--output", "-O", help="Output format: table, json"),
-    watch: Optional[int] = typer.Option(None, "--watch", "-w", help="Auto-refresh every N minutes"),
+    output: str | None = typer.Option(None, "--output", "-O", help="Output format: table, json"),
+    watch: int | None = typer.Option(None, "--watch", "-w", help="Auto-refresh every N minutes"),
 ) -> None:
     """Show usage for one or all accounts."""
     if not watch:
@@ -118,7 +116,7 @@ def show_command(
 
 @app.command("open")
 def open_command(
-    name: Optional[str] = typer.Argument(
+    name: str | None = typer.Argument(
         None, help="Account name", autocompletion=complete_account_name
     ),
 ) -> None:

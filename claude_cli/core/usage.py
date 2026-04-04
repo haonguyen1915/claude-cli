@@ -102,8 +102,15 @@ def _fetch_usage_api(token: str) -> tuple[ApiUsageData | None, str]:
         return None, "API unavailable"
 
 
+# Cache last successful API usage per account
+_usage_cache: dict[str, "ApiUsageData"] = {}
+
+
 def get_usage_info(name: str) -> UsageInfo:
-    """Get usage info for an account, including live API data."""
+    """Get usage info for an account, including live API data.
+
+    On rate limit or error, returns cached data with error status.
+    """
     config = load_config()
     account = config.accounts.get(name)
     if not account:
@@ -115,6 +122,13 @@ def get_usage_info(name: str) -> UsageInfo:
 
     if token:
         api_usage, status = _fetch_usage_api(token)
+        if api_usage:
+            _usage_cache[name] = api_usage
+            status = "OK"
+        elif name in _usage_cache:
+            # Use cached data on error
+            api_usage = _usage_cache[name]
+            status = f"{status} (cached)"
     else:
         status = "No credentials"
 
@@ -127,10 +141,27 @@ def get_usage_info(name: str) -> UsageInfo:
     )
 
 
-def get_all_usage_info() -> list[UsageInfo]:
-    """Get usage info for all accounts."""
+_first_fetch_done = False
+
+
+def get_all_usage_info(delay: float = 20.0) -> list[UsageInfo]:
+    """Get usage info for all accounts. First call is parallel, subsequent calls have delay."""
+    global _first_fetch_done
+    import time
+
     config = load_config()
-    return [get_usage_info(name) for name in config.accounts]
+    names = list(config.accounts.keys())
+
+    if not _first_fetch_done:
+        _first_fetch_done = True
+        return [get_usage_info(name) for name in names]
+
+    results = []
+    for i, name in enumerate(names):
+        results.append(get_usage_info(name))
+        if i < len(names) - 1:
+            time.sleep(delay)
+    return results
 
 
 def open_usage_page() -> None:

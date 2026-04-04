@@ -121,21 +121,38 @@ def _format_reset_time(resets_at: datetime) -> str:
         return local.strftime("%b %d %I%p")
 
 
-def _collect_rows(
-    usage: "UsageInfo",
-) -> list[tuple[str, str, str, str, str]]:
-    """Collect table rows for one account. Returns (account, tier, metric, bar, resets)."""
+def _status_style(status: str) -> str:
+    """Return styled status string."""
+    s = status.lower()
+    if s == "ok":
+        return "[green]OK[/green]"
+    elif "cached" in s:
+        return f"[yellow]{status}[/yellow]"
+    elif "rate limit" in s or "error" in s or "timeout" in s:
+        return f"[red]{status}[/red]"
+    elif "no credentials" in s:
+        return f"[dim]{status}[/dim]"
+    return f"[dim]{status}[/dim]"
+
+
+# Row: (account, tier, metric, bar, resets, status)
+_Row = tuple[str, str, str, str, str, str]
+
+
+def _collect_rows(usage: UsageInfo) -> list[_Row]:
+    """Collect table rows for one account."""
     api = usage.api_usage
-    rows: list[tuple[str, str, str, str, str]] = []
+    rows: list[_Row] = []
 
     account_label = usage.account_name
     tier = usage.tier
+    styled_status = _status_style(usage.status)
 
     if not api:
-        rows.append((account_label, tier, "", f"[dim]{usage.status}[/dim]", ""))
+        rows.append((account_label, tier, "", "", "", styled_status))
         return rows
 
-    windows: list[tuple[str, str, "RateWindow | None"]] = [
+    windows: list[tuple[str, str, RateWindow | None]] = [
         ("Session", "S", api.five_hour),
         ("Week/All", "W", api.seven_day),
         ("Week/Opus", "Op", api.seven_day_opus),
@@ -153,6 +170,7 @@ def _collect_rows(
             f"{pct_str} {label}",
             _progress_bar(window.utilization, width=20),
             _format_reset_time(window.resets_at) if window.resets_at else "",
+            styled_status if first else "",
         ))
         first = False
 
@@ -165,6 +183,7 @@ def _collect_rows(
             f"{pct_str} Extra",
             _progress_bar(pct, width=20),
             "",
+            styled_status if first else "",
         ))
 
     return rows
@@ -178,11 +197,12 @@ def build_usage_table(usage_list: list[UsageInfo]) -> Table:
     table.add_column("Metric", no_wrap=True)
     table.add_column("Bar", no_wrap=True)
     table.add_column("Resets", style="dim")
+    table.add_column("Status", no_wrap=True)
 
     for i, usage in enumerate(usage_list):
         rows = _collect_rows(usage)
-        for account, tier, metric, bar, resets in rows:
-            table.add_row(account, tier, metric, bar, resets)
+        for account, tier, metric, bar, resets, status in rows:
+            table.add_row(account, tier, metric, bar, resets, status)
         if i < len(usage_list) - 1:
             table.add_section()
 
@@ -199,7 +219,7 @@ def print_usage_summary_table(usage_list: list[UsageInfo]) -> None:
 # ─── Usage detail for single account ────────────────────────────────────────
 
 
-def print_usage_detail(usage: "UsageInfo") -> None:
+def print_usage_detail(usage: UsageInfo) -> None:
     """Print detailed usage for a single account."""
     print_usage_summary_table([usage])
 

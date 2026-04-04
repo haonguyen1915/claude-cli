@@ -18,7 +18,6 @@ def check_auth_status(name: str) -> tuple[str, str]:
         and expires_display is a human-readable expiry string.
     """
     import json
-    import time
     from datetime import datetime, timezone
 
     account_dir = get_account_dir(name)

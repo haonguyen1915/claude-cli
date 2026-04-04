@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import shutil
-from typing import Optional
 
 import typer
 
@@ -49,7 +48,7 @@ def quick_run_command_direct(args: list[str]) -> None:
 
 
 def quick_run_command(
-    args: Optional[list[str]] = typer.Argument(None, help="Arguments passed through to claude"),
+    args: list[str] | None = typer.Argument(None, help="Arguments passed through to claude"),
 ) -> None:
     """Launch Claude Code with the current default account (no prompt)."""
     accounts = list_accounts()
@@ -67,12 +66,12 @@ def quick_run_command(
 
 def run_command(
     ctx: typer.Context,
-    account: Optional[str] = typer.Option(
+    account: str | None = typer.Option(
         None, "--account", "-a",
         help="Account to use (skip interactive prompt)",
         autocompletion=complete_account_name,
     ),
-    args: Optional[list[str]] = typer.Argument(None, help="Arguments passed through to claude"),
+    args: list[str] | None = typer.Argument(None, help="Arguments passed through to claude"),
 ) -> None:
     """Launch Claude Code — interactively select account (or use -a to specify)."""
     if ctx.invoked_subcommand is not None:
