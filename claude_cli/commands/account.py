@@ -14,7 +14,7 @@ from claude_cli.core.account import (
     rename_account,
     setup_symlinks,
 )
-from claude_cli.core.auth import check_auth_status, trigger_login
+from claude_cli.core.auth import check_auth_status, refresh_token, trigger_login
 from claude_cli.core.config import SHARED_DIR, load_config
 from claude_cli.ui import console, error, info, print_detail, print_header, success
 from claude_cli.ui.prompts import confirm, select_account, select_from_list, text_input
@@ -278,3 +278,51 @@ def repair_command(
         account_dir = get_account_dir(acct)
         setup_symlinks(account_dir)
         success(f"Repaired symlinks for '{acct}'")
+
+
+@app.command("refresh")
+def refresh_command(
+    name: str | None = typer.Argument(
+        None,
+        help="Account name (default: all expired/expiring accounts)",
+        autocompletion=complete_account_name,
+    ),
+) -> None:
+    """Refresh OAuth tokens for expired or expiring accounts."""
+    accounts = list_accounts()
+    if not accounts:
+        info("No accounts configured.")
+        raise typer.Exit(0)
+
+    targets = [name] if name else accounts
+    for acct in targets:
+        if acct not in accounts:
+            error(f"Account '{acct}' not found.")
+            raise typer.Exit(4)
+
+        status, expires = check_auth_status(acct)
+        if status == "none":
+            info(f"{acct}: no credentials — run 'claude-cli account login {acct}'")
+            continue
+        if status == "valid" and name is None:
+            # Skip valid accounts when refreshing all
+            console.print(f"  {acct}: [green]valid[/green] ({expires})")
+            continue
+
+        if refresh_token(acct):
+            _, new_expires = check_auth_status(acct)
+            success(f"{acct}: refreshed (expires {new_expires})")
+        else:
+            error(f"{acct}: refresh failed — try 'claude-cli account login {acct}'")
+
+
+@app.command("patch-ime")
+def patch_ime_command() -> None:
+    """Apply Vietnamese IME fix to Claude Code (Unikey/OpenKey support)."""
+    from claude_cli.core.ime_patch import apply_patch
+
+    ok, msg = apply_patch()
+    if ok:
+        success(msg)
+    else:
+        error(msg)

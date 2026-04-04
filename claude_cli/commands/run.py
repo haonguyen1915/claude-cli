@@ -13,6 +13,17 @@ from claude_cli.ui.prompts import select_account
 from claude_cli.utils.completers import complete_account_name
 
 
+def _ensure_ime_patch() -> None:
+    """Auto-patch Claude Code for Vietnamese IME if needed."""
+    from claude_cli.core.ime_patch import apply_patch, is_patched
+
+    if not is_patched():
+        ok, msg = apply_patch()
+        if ok:
+            info(f"Vietnamese IME: {msg}")
+        # Silently skip if patch fails — don't block launch
+
+
 def _launch(name: str, args: list[str]) -> None:
     """Exec into claude with the given account's config dir."""
     accounts = list_accounts()
@@ -25,6 +36,8 @@ def _launch(name: str, args: list[str]) -> None:
         error("'claude' binary not found on PATH.")
         info("Install Claude Code first: https://docs.anthropic.com/en/docs/claude-code")
         raise typer.Exit(1)
+
+    _ensure_ime_patch()
 
     account_dir = get_account_dir(name)
     env = os.environ.copy()
