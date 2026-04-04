@@ -14,24 +14,38 @@ def check_auth_status(name: str) -> str:
     """Check authentication status for an account via macOS Keychain.
 
     Returns:
-        "valid" — keychain entry exists with OAuth token
-        "none" — no keychain entry found
+        "valid"   — token exists and not expired
+        "expired" — token exists but expiresAt has passed
+        "none"    — no keychain entry found
     """
+    import json
+    import time
+
     account_dir = get_account_dir(name)
     service = _keychain_service_name(account_dir)
     username = getuser()
 
     try:
         result = subprocess.run(
-            ["security", "find-generic-password", "-s", service, "-a", username],
+            ["security", "find-generic-password", "-s", service, "-a", username, "-w"],
             capture_output=True,
             text=True,
             timeout=5,
         )
-        if result.returncode == 0:
-            return "valid"
-        return "none"
-    except (subprocess.TimeoutExpired, OSError):
+        if result.returncode != 0:
+            return "none"
+
+        data = json.loads(result.stdout.strip())
+        oauth = data.get("claudeAiOauth", {})
+        expires_at_ms = oauth.get("expiresAt")
+
+        if expires_at_ms is not None:
+            # expiresAt is in milliseconds
+            if time.time() * 1000 > expires_at_ms:
+                return "expired"
+
+        return "valid"
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
         return "none"
 
 
