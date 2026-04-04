@@ -1,4 +1,4 @@
-.PHONY: install dev lint format test build clean
+.PHONY: install dev lint format test build clean publish publish-test
 
 install:
 	pip install .
@@ -28,3 +28,9 @@ clean:
 	rm -rf dist/ build/ *.egg-info src/*.egg-info
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
+
+publish-test: build
+	twine upload --repository testpypi dist/*
+
+publish: build
+	twine upload dist/*
