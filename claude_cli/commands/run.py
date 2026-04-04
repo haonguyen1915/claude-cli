@@ -33,6 +33,21 @@ def _launch(name: str, args: list[str]) -> None:
     os.execvpe(claude_bin, [claude_bin] + args, env)
 
 
+def quick_run_command_direct(args: list[str]) -> None:
+    """Launch Claude Code with default account — called before typer parsing."""
+    accounts = list_accounts()
+    if not accounts:
+        error("No accounts configured. Run 'claude-cli init' first.")
+        raise SystemExit(2)
+
+    name = get_default_account()
+    if not name:
+        error("No default account set. Run 'claude-cli use <name>' or 'claude-cli run'.")
+        raise SystemExit(2)
+
+    _launch(name, args)
+
+
 def quick_run_command(
     args: Optional[list[str]] = typer.Argument(None, help="Arguments passed through to claude"),
 ) -> None:

@@ -16,6 +16,7 @@ from claude_cli.models.config import AccountConfig
 SYMLINKED_ITEMS = [
     "CLAUDE.md",
     "settings.json",
+    "settings.local.json",
     ".claude.json",
     "rules",
     "agents",
@@ -30,6 +31,18 @@ SYMLINKED_ITEMS = [
     "sessions",
     "history.jsonl",
     "ide",
+    "backups",
+    "cache",
+    "config",
+    "debug",
+    "file-history",
+    "mcp-needs-auth-cache.json",
+    "paste-cache",
+    "policy-limits.json",
+    "session-env",
+    "shell-snapshots",
+    "stats-cache.json",
+    "telemetry",
 ]
 
 # Placeholder files created in shared/ if they don't exist.

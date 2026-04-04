@@ -8,6 +8,9 @@ import typer
 
 from claude_cli import __version__
 
+# Known subcommands — anything else gets passed through to claude
+_SUBCOMMANDS = {"init", "use", "run", "status", "account", "config", "usage", "history"}
+
 app = typer.Typer(
     name="claude-cli",
     help="CLI tool for managing multiple Claude Code subscription accounts.",
@@ -44,13 +47,31 @@ def main(
     except Exception:
         pass
 
-    # If a subcommand was invoked, let it handle
     if ctx.invoked_subcommand is not None:
         return
 
     # No subcommand — quick launch with default account, pass remaining args
     from claude_cli.commands.run import quick_run_command
     ctx.invoke(quick_run_command, args=ctx.args)
+
+
+def _main() -> None:
+    """Entry point that intercepts non-subcommand args before typer."""
+    args = sys.argv[1:]
+
+    # If first real arg (after -- or flags) is not a known subcommand,
+    # treat everything as passthrough to claude via quick_run
+    if args:
+        # Strip leading --
+        clean = args[1:] if args[0] == "--" else args
+        first = clean[0] if clean else None
+        if first and first not in _SUBCOMMANDS and first not in ("--help", "-h", "--version", "-V",
+                                                                   "--install-completion", "--show-completion"):
+            from claude_cli.commands.run import quick_run_command_direct
+            quick_run_command_direct(clean)
+            return
+
+    app()
 
 
 # ─── Register sub-command groups ─────────────────────────────────────────────
