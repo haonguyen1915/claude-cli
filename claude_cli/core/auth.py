@@ -62,7 +62,7 @@ def check_auth_status(name: str) -> tuple[str, str]:
 
 
 OAUTH_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
-OAUTH_TOKEN_URL = "https://console.anthropic.com/v1/oauth/token"
+OAUTH_TOKEN_URL = "https://api.anthropic.com/v1/oauth/token"
 
 # Refresh when token expires within this many minutes
 REFRESH_THRESHOLD_MINUTES = 120
