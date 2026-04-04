@@ -1,36 +1,36 @@
 .PHONY: install dev lint format test build clean publish publish-test
 
 install:
-	pip install .
+	poetry install --only main
 
 dev:
-	pip install -e ".[dev]"
+	poetry install
 
 lint:
-	ruff check src/ tests/
-	ruff format --check src/ tests/
-	mypy src/
+	poetry run ruff check claude_cli/ tests/
+	poetry run ruff format --check claude_cli/ tests/
+	poetry run mypy claude_cli/
 
 format:
-	ruff check --fix src/ tests/
-	ruff format src/ tests/
+	poetry run ruff check --fix claude_cli/ tests/
+	poetry run ruff format claude_cli/ tests/
 
 test:
-	pytest
+	poetry run pytest
 
 test-cov:
-	pytest --cov=src --cov-report=html --cov-report=term
+	poetry run pytest --cov=claude_cli --cov-report=html --cov-report=term
 
 build: clean
-	python -m build
+	poetry build
 
 clean:
-	rm -rf dist/ build/ *.egg-info src/*.egg-info
+	rm -rf dist/ build/ *.egg-info claude_cli/*.egg-info
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
 
 publish-test: build
-	twine upload --repository testpypi dist/*
+	poetry publish -r testpypi
 
 publish: build
-	twine upload dist/*
+	poetry publish
