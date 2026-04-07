@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.1.3] - 2026-04-07
+
+### Release Notes
+
+Enhanced command functionality and improved token management.
+
+### What's Changed
+- Replaced account rename functionality with a more versatile update command.
+- Improved token management by forcing refresh and auto-login on failure.
+- Fixed issues with API refresh token handling.
+- Resolved unicode display issues in terminal.
+
+### Features
+
+- feat: replace account rename with update command (aaf7dff)
+
+### Bug Fixes
+
+- fix: force refresh all tokens and auto-login on failure (111aa7b)
+- fix: API refresh token (36cc046)
+- fix: unicode in terminal (0acd9cd)
+
+**Contributors:** @Nguyễn Văn Hảo
+
+**Compare changes:** [v0.1.2...v0.1.3](https://github.com/haonguyen1915/claude-cli.git/-/compare/v0.1.2...v0.1.3)
+
 ## [0.1.2] - 2026-04-04
 
 ### Release Notes
