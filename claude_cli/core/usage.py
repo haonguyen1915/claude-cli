@@ -147,14 +147,22 @@ def _get_cache() -> dict[str, ApiUsageData]:
 def get_usage_info(name: str) -> UsageInfo:
     """Get usage info for an account, including live API data.
 
+    Auto-refreshes expired tokens before calling API.
     On rate limit or error, returns cached data with error status.
     """
+    from claude_cli.core.auth import refresh_token, token_needs_refresh
+
     config = load_config()
     account = config.accounts.get(name)
     if not account:
         return UsageInfo(account_name=name, tier="unknown", status="Not found")
 
     cache = _get_cache()
+
+    # Auto-refresh expired/expiring tokens before calling usage API
+    if token_needs_refresh(name):
+        refresh_token(name)
+
     token = _get_oauth_token(name)
     api_usage = None
     status = "Active"
