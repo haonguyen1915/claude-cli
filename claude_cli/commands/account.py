@@ -11,8 +11,8 @@ from claude_cli.core.account import (
     get_default_account,
     list_accounts,
     remove_account,
-    rename_account,
     setup_symlinks,
+    update_account,
 )
 from claude_cli.core.auth import check_auth_status, refresh_token, token_needs_refresh, trigger_login
 from claude_cli.core.config import SHARED_DIR, load_config
@@ -156,43 +156,85 @@ def remove_command(
     success(f'Account "{name}" removed')
 
 
-@app.command("rename")
-def rename_command(
-    old_name: str | None = typer.Argument(
-        None, help="Current account name", autocompletion=complete_account_name
+@app.command("update")
+def update_command(
+    name: str | None = typer.Argument(
+        None, help="Account to update", autocompletion=complete_account_name
     ),
-    new_name: str | None = typer.Argument(None, help="New account name"),
+    slug: str | None = typer.Option(None, "--slug", "-s", help="New account slug"),
+    label: str | None = typer.Option(None, "--label", "-l", help="New display label"),
+    tier: str | None = typer.Option(
+        None, "--tier", "-t", help="New subscription tier", autocompletion=complete_tier
+    ),
 ) -> None:
-    """Rename an account slug."""
+    """Update account info (slug, label, tier)."""
     accounts = list_accounts()
     if not accounts:
         info("No accounts configured.")
         raise typer.Exit(0)
 
-    if not old_name:
-        old_name = select_account("Select account to rename:")
-        if old_name is None:
+    if not name:
+        name = select_account("Select account to update:")
+        if name is None:
             raise typer.Exit(130)
 
-    if old_name not in accounts:
-        error(f"Account '{old_name}' not found.")
+    if name not in accounts:
+        error(f"Account '{name}' not found.")
         raise typer.Exit(4)
 
-    if not new_name:
-        new_name = text_input("New account name (slug):")
-        if new_name is None:
+    # Interactive prompts if no options given
+    if not slug and not label and not tier:
+        config = load_config()
+
+        slug_input = text_input(f"New slug (enter to skip) [{name}]:")
+        if slug_input is None:
             raise typer.Exit(130)
-        new_name = new_name.strip().lower()
+        slug = slug_input.strip().lower() or None
 
-    if not validate_account_name(new_name):
-        error("Invalid new name. Use lowercase letters, digits, hyphens.")
-        raise typer.Exit(2)
-    if new_name in accounts:
-        error(f"Account '{new_name}' already exists.")
+        current_label = config.accounts[name].label
+        label_input = text_input(f"New label (enter to skip) [{current_label}]:")
+        if label_input is None:
+            raise typer.Exit(130)
+        label = label_input.strip() or None
+
+        current_tier = config.accounts[name].tier
+        tier_input = select_from_list(
+            f"New tier (current: {current_tier}):", TIER_CHOICES + ["(skip)"]
+        )
+        if tier_input is None:
+            raise typer.Exit(130)
+        tier = None if tier_input == "(skip)" else tier_input
+
+    if slug and not validate_account_name(slug):
+        error("Invalid slug. Use lowercase letters, digits, hyphens.")
         raise typer.Exit(2)
 
-    rename_account(old_name, new_name)
-    success(f"Account renamed: {old_name} \u2192 {new_name}")
+    if label is not None and not validate_label(label):
+        error("Label cannot be empty.")
+        raise typer.Exit(2)
+
+    if tier and tier not in TIER_CHOICES:
+        error(f"Invalid tier '{tier}'. Choose from: {', '.join(TIER_CHOICES)}")
+        raise typer.Exit(2)
+
+    if not slug and not label and not tier:
+        info("Nothing to update.")
+        raise typer.Exit(0)
+
+    try:
+        final_name = update_account(name, new_name=slug, new_label=label, new_tier=tier)
+    except ValueError as e:
+        error(str(e))
+        raise typer.Exit(2)
+
+    changes = []
+    if slug and slug != name:
+        changes.append(f"slug: {name} → {final_name}")
+    if label:
+        changes.append(f"label: {label}")
+    if tier:
+        changes.append(f"tier: {tier}")
+    success(f"Updated '{final_name}': {', '.join(changes)}")
 
 
 @app.command("login")

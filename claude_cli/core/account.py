@@ -139,6 +139,45 @@ def rename_account(old_name: str, new_name: str) -> None:
     save_config(config)
 
 
+def update_account(
+    name: str,
+    *,
+    new_name: str | None = None,
+    new_label: str | None = None,
+    new_tier: str | None = None,
+) -> str:
+    """Update account fields. Returns the final account name."""
+    config = load_config()
+    if name not in config.accounts:
+        raise ValueError(f"Account '{name}' not found")
+
+    account = config.accounts[name]
+
+    if new_label:
+        account.label = new_label
+
+    if new_tier:
+        account.tier = new_tier  # type: ignore[assignment]
+
+    # Rename slug last (moves dir + re-keys config)
+    final_name = name
+    if new_name and new_name != name:
+        if new_name in config.accounts:
+            raise ValueError(f"Account '{new_name}' already exists")
+        old_dir = ACCOUNTS_DIR / name
+        new_dir = ACCOUNTS_DIR / new_name
+        if old_dir.exists():
+            old_dir.rename(new_dir)
+            setup_symlinks(new_dir)
+        config.accounts[new_name] = config.accounts.pop(name)
+        if config.default == name:
+            config.default = new_name
+        final_name = new_name
+
+    save_config(config)
+    return final_name
+
+
 def get_account_dir(name: str) -> Path:
     """Get the filesystem path for an account's config directory."""
     return ACCOUNTS_DIR / name
