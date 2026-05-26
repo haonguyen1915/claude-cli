@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.4] - 2026-05-26
+
+### Release Notes
+
+### What's Changed
+- Ensured compatibility with questionary by pinning prompt-toolkit version.
+
+### Bug Fixes
+
+- fix: pin prompt-toolkit version for questionary compatibility (38f4d80)
+
+**Contributors:** @Nguyễn Văn Hảo
+
+**Compare changes:** [v0.1.3...v0.1.4](https://github.com/haonguyen1915/claude-cli.git/-/compare/v0.1.3...v0.1.4)
+
 ## [0.1.3] - 2026-04-07
 
 ### Release Notes
