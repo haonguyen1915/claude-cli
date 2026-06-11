@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import shutil
+import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -68,6 +70,32 @@ def ensure_shared_dir() -> None:
             fpath.write_text(default_content)
 
 
+def _create_link(link_path: Path, src: Path, target: str) -> None:
+    """Create a link from link_path to src.
+
+    Tries symlink first. On Windows without symlink privilege (WinError 1314),
+    falls back to directory junction or file hardlink — neither needs admin.
+    """
+    try:
+        link_path.symlink_to(target)
+        return
+    except OSError as e:
+        # WinError 1314 = SeCreateSymbolicLinkPrivilege missing
+        if sys.platform != "win32" or getattr(e, "winerror", None) != 1314:
+            raise
+
+    if src.is_dir():
+        # Junction: works without admin, only for directories
+        subprocess.run(
+            ["cmd", "/c", "mklink", "/J", str(link_path), str(src)],
+            check=True,
+            capture_output=True,
+        )
+    else:
+        # Hardlink: works without admin, only for files on same volume
+        os.link(src, link_path)
+
+
 def setup_symlinks(account_dir: Path) -> None:
     """Create symlinks from account dir directly to ~/.claude/ items."""
     claude_dir = Path.home() / ".claude"
@@ -86,7 +114,7 @@ def setup_symlinks(account_dir: Path) -> None:
                 link_path.unlink()
             else:
                 shutil.rmtree(link_path)
-        link_path.symlink_to(target)
+        _create_link(link_path, src, target)
 
 
 def add_account(name: str, label: str, tier: str) -> Path:
