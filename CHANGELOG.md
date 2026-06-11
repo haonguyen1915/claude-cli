@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.5] - 2026-06-11
+
+### Release Notes
+
+### What's Changed
+- Implemented fallback to junction/hardlink when Windows symlink creation fails, improving compatibility.
+
+### Bug Fixes
+
+- fix: fall back to junction/hardlink on windows symlink failure (52814ef)
+
+**Contributors:** @Nguyễn Văn Hảo
+
+**Compare changes:** [v0.1.4...v0.1.5](https://github.com/haonguyen1915/claude-cli.git/-/compare/v0.1.4...v0.1.5)
+
 ## [0.1.4] - 2026-05-26
 
 ### Release Notes
