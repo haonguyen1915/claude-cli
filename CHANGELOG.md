@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.1.6] - 2026-06-25
+
+### Release Notes
+
+Improved configuration management for user accounts.
+
+### What's Changed
+- Ensured .claude.json configuration is correctly maintained per account for accurate status display.
+- Automatically seeded missing JSON configuration files with an empty object to prevent errors.
+
+### Bug Fixes
+
+- fix: keep .claude.json per-account so status shows correct account (7fd7c3b)
+- fix: seed missing json config files with empty object (fc2e71b)
+
+**Contributors:** @Nguyễn Văn Hảo
+
+**Compare changes:** [v0.1.5...v0.1.6](https://github.com/haonguyen1915/claude-cli.git/-/compare/v0.1.5...v0.1.6)
+
 ## [0.1.5] - 2026-06-11
 
 ### Release Notes
