@@ -105,7 +105,12 @@ def setup_symlinks(account_dir: Path) -> None:
         if not src.exists():
             if "." in item:
                 src.parent.mkdir(parents=True, exist_ok=True)
-                src.touch()
+                # JSON files must contain valid JSON; Claude Code rejects
+                # empty files as corrupted ("Unexpected EOF").
+                if item.endswith(".json"):
+                    src.write_text("{}")
+                else:
+                    src.touch()
             else:
                 src.mkdir(parents=True, exist_ok=True)
         target = os.path.relpath(src, account_dir)
