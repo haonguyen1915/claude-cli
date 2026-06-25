@@ -18,14 +18,18 @@ from claude_cli.core.config import (
 )
 from claude_cli.models.config import AccountConfig
 
-# Items symlinked from shared/ into each account directory.
-# Only .credentials.json stays per-account (real file).
-# All items symlinked directly to ~/.claude/
+# Per-account real files (NOT symlinked, unique to each account):
+#   - .credentials.json: OAuth tokens
+#   - .claude.json: holds oauthAccount identity that /status reads, so it must
+#     not be shared. Conversation history is shared via separate symlinks below
+#     (projects/, history.jsonl, sessions, todos), not through this file.
+CLAUDE_JSON = ".claude.json"
+
+# Items symlinked from each account directory directly to ~/.claude/.
 SYMLINKED_ITEMS = [
     "CLAUDE.md",
     "settings.json",
     "settings.local.json",
-    ".claude.json",
     "rules",
     "agents",
     "plans",
@@ -120,6 +124,29 @@ def setup_symlinks(account_dir: Path) -> None:
             else:
                 shutil.rmtree(link_path)
         _create_link(link_path, src, target)
+    setup_claude_json(account_dir)
+
+
+def setup_claude_json(account_dir: Path) -> None:
+    """Ensure the account has its own real .claude.json (per-account identity).
+
+    .claude.json carries the oauthAccount block that /status displays, so each
+    account must own a separate copy — sharing it makes every account show the
+    last-logged-in identity. Migrates an old shared symlink to a real file by
+    seeding from ~/.claude/.claude.json (inheriting trust/onboarding state); the
+    identity finalizes when that account logs in. Leaves an existing real file
+    untouched.
+    """
+    path = account_dir / CLAUDE_JSON
+    if path.is_symlink():
+        path.unlink()  # migrate legacy shared symlink -> real file
+    if path.exists():
+        return  # already a per-account real file
+    shared = Path.home() / ".claude" / CLAUDE_JSON
+    if shared.exists():
+        shutil.copy2(shared, path)
+    else:
+        path.write_text("{}")
 
 
 def add_account(name: str, label: str, tier: str) -> Path:

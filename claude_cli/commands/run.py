@@ -7,7 +7,12 @@ import shutil
 
 import typer
 
-from claude_cli.core.account import get_account_dir, get_default_account, list_accounts
+from claude_cli.core.account import (
+    get_account_dir,
+    get_default_account,
+    list_accounts,
+    setup_claude_json,
+)
 from claude_cli.ui import error, info
 from claude_cli.ui.prompts import select_account
 from claude_cli.utils.completers import complete_account_name
@@ -40,6 +45,9 @@ def _launch(name: str, args: list[str]) -> None:
     _ensure_ime_patch()
 
     account_dir = get_account_dir(name)
+    # Migrate legacy shared .claude.json symlink to a per-account file so
+    # /status reflects this account instead of the last-logged-in one.
+    setup_claude_json(account_dir)
     env = os.environ.copy()
     env["CLAUDE_CONFIG_DIR"] = str(account_dir)
     os.execvpe(claude_bin, [claude_bin] + args, env)
