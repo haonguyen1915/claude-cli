@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import shutil
+from pathlib import Path
 
 import typer
 
@@ -16,6 +17,30 @@ from claude_cli.core.account import (
 from claude_cli.ui import error, info
 from claude_cli.ui.prompts import select_account
 from claude_cli.utils.completers import complete_account_name
+
+
+def _find_claude_bin() -> str | None:
+    """Locate the claude executable.
+
+    Tries $PATH first, then common install dirs that may be missing from PATH in
+    non-login/non-interactive shells (the native installer only adds ~/.local/bin
+    to PATH via .zshrc/.zprofile).
+    """
+    found = shutil.which("claude")
+    if found:
+        return found
+    home = Path.home()
+    candidates = [
+        home / ".local" / "bin" / "claude",
+        home / ".claude" / "local" / "claude",
+        home / ".npm-global" / "bin" / "claude",
+        Path("/opt/homebrew/bin/claude"),
+        Path("/usr/local/bin/claude"),
+    ]
+    for path in candidates:
+        if path.is_file() and os.access(path, os.X_OK):
+            return str(path)
+    return None
 
 
 def _ensure_ime_patch() -> None:
@@ -36,7 +61,7 @@ def _launch(name: str, args: list[str]) -> None:
         error(f"Account '{name}' not found.")
         raise typer.Exit(4)
 
-    claude_bin = shutil.which("claude")
+    claude_bin = _find_claude_bin()
     if not claude_bin:
         error("'claude' binary not found on PATH.")
         info("Install Claude Code first: https://docs.anthropic.com/en/docs/claude-code")
