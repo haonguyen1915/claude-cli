@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.7] - 2026-06-29
+
+### Release Notes
+
+### What's Changed
+- Improved installation process by automatically detecting Claude in common directories when not found on the path.
+
+### Bug Fixes
+
+- fix: fall back to common install dirs when claude not on path (d31b62e)
+
+**Contributors:** @Nguyễn Văn Hảo
+
+**Compare changes:** [v0.1.6...v0.1.7](https://github.com/haonguyen1915/claude-cli.git/-/compare/v0.1.6...v0.1.7)
+
 ## [0.1.6] - 2026-06-25
 
 ### Release Notes
